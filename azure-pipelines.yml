@@ -1,0 +1,30 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.8'
+    addToPath: true
+
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: 'Install dependencies'
+
+- script: |
+    python train_model.py
+  displayName: 'Train model'
+
+- script: |
+    az login --service-principal -u $(Azure_Service_Principal_id) -p $(Azure_Service_Principal_secret) --tenant $(Azure_Tenant_id)
+    az ml model register -n my-model -p outputs/model.joblib -g $(Resource_Group) -w $(ML_Workspace)
+  env:
+    Azure_Service_Principal_id: $(servicePrincipalId)
+    Azure_Service_Principal_secret: $(servicePrincipalKey)
+    Azure_Tenant_id: $(tenantId)
+  displayName: 'Register model to Azure ML'
+
